@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  zenmedix-backend:
+    image: spectado/pocketbase:latest
+    volumes:
+      - /pb_data
+    networks:
+      - SociosNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=SociosNet"
+        - "traefik.http.routers.zenmedix-api.rule=Host(`api-consultorio.logicapp.net`)"
+        - "traefik.http.routers.zenmedix-api.entrypoints=websecure"
+        - "traefik.http.routers.zenmedix-api.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.zenmedix-api.loadbalancer.server.port=80"
+
+  zenmedix-frontend:
+    image: ghcr.io/joel110311/zenmedix:latest
+    networks:
+      - SociosNet
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=SociosNet"
+        - "traefik.http.routers.zenmedix.rule=Host(`consultorio.logicapp.net`)"
+        - "traefik.http.routers.zenmedix.entrypoints=websecure"
+        - "traefik.http.routers.zenmedix.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.zenmedix.loadbalancer.server.port=80"
+
+networks:
+  SociosNet:
+    external: true

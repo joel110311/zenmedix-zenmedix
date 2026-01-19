@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="zenGradFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14b8a6" />
+      <stop offset="100%" stop-color="#0d4f5f" />
+    </linearGradient>
+  </defs>
+  <!-- Center lotus petal -->
+  <path d="M24 6C24 6 16 16 16 26C16 36 24 40 24 40C24 40 32 36 32 26C32 16 24 6 24 6Z"
+    fill="url(#zenGradFav)" opacity="0.95" />
+  <!-- Left petal -->
+  <path d="M10 16C10 16 12 26 20 32C20 32 14 24 14 16C14 8 10 16 10 16Z"
+    fill="url(#zenGradFav)" opacity="0.75" />
+  <!-- Right petal -->
+  <path d="M38 16C38 16 36 26 28 32C28 32 34 24 34 16C34 8 38 16 38 16Z"
+    fill="url(#zenGradFav)" opacity="0.75" />
+  <!-- Heartbeat/ECG line -->
+  <path d="M6 26L14 26L18 18L22 34L26 22L30 26L42 26"
+    stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>
