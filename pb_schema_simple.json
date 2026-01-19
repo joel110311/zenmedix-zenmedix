@@ -1,0 +1,385 @@
+[
+    {
+        "name": "patients",
+        "type": "base",
+        "system": false,
+        "listRule": "@request.auth.id != ''",
+        "viewRule": "@request.auth.id != ''",
+        "createRule": "@request.auth.id != ''",
+        "updateRule": "@request.auth.id != ''",
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "firstName",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "lastName",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "dni",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "dob",
+                "type": "date",
+                "required": false
+            },
+            {
+                "name": "sex",
+                "type": "select",
+                "required": false,
+                "options": {
+                    "values": [
+                        "masculino",
+                        "femenino"
+                    ]
+                }
+            },
+            {
+                "name": "phone",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "email",
+                "type": "email",
+                "required": false
+            },
+            {
+                "name": "address",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "allergies",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "pathologicalHistory",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "nonPathologicalHistory",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "lastVisit",
+                "type": "date",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "clinics",
+        "type": "base",
+        "system": false,
+        "listRule": "",
+        "viewRule": "",
+        "createRule": "@request.auth.id != ''",
+        "updateRule": "@request.auth.id != ''",
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "name",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "subtitle",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "phone",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "address",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "city",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "logo",
+                "type": "file",
+                "required": false,
+                "options": {
+                    "maxSelect": 1,
+                    "maxSize": 5242880,
+                    "mimeTypes": [
+                        "image/jpeg",
+                        "image/png",
+                        "image/svg+xml",
+                        "image/webp"
+                    ]
+                }
+            },
+            {
+                "name": "schedule",
+                "type": "json",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "appointments",
+        "type": "base",
+        "system": false,
+        "listRule": "@request.auth.id != ''",
+        "viewRule": "@request.auth.id != ''",
+        "createRule": "",
+        "updateRule": "@request.auth.id != ''",
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "patient",
+                "type": "relation",
+                "required": false,
+                "options": {
+                    "collectionId": "patients",
+                    "cascadeDelete": false,
+                    "maxSelect": 1
+                }
+            },
+            {
+                "name": "patientName",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "phone",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "date",
+                "type": "date",
+                "required": true
+            },
+            {
+                "name": "time",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "reason",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "notes",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "status",
+                "type": "select",
+                "required": true,
+                "options": {
+                    "values": [
+                        "scheduled",
+                        "confirmed",
+                        "attended",
+                        "cancelled",
+                        "noShow"
+                    ]
+                }
+            },
+            {
+                "name": "consultationCompleted",
+                "type": "bool",
+                "required": false
+            },
+            {
+                "name": "source",
+                "type": "text",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "consultations",
+        "type": "base",
+        "system": false,
+        "listRule": "@request.auth.id != ''",
+        "viewRule": "@request.auth.id != ''",
+        "createRule": "@request.auth.id != ''",
+        "updateRule": "@request.auth.id != ''",
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "patient",
+                "type": "relation",
+                "required": true,
+                "options": {
+                    "collectionId": "patients",
+                    "cascadeDelete": false,
+                    "maxSelect": 1
+                }
+            },
+            {
+                "name": "type",
+                "type": "select",
+                "required": true,
+                "options": {
+                    "values": [
+                        "consultation",
+                        "certificate"
+                    ]
+                }
+            },
+            {
+                "name": "reason",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "weight",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "height",
+                "type": "number",
+                "required": false
+            },
+            {
+                "name": "bloodPressure",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "heartRate",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "temperature",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "respiratoryRate",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "oxygenSaturation",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "symptoms",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "diagnosis",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "treatment",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "indications",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "medications",
+                "type": "json",
+                "required": false
+            },
+            {
+                "name": "labResults",
+                "type": "json",
+                "required": false
+            },
+            {
+                "name": "studies",
+                "type": "json",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "config",
+        "type": "base",
+        "system": false,
+        "listRule": "",
+        "viewRule": "",
+        "createRule": "@request.auth.id != ''",
+        "updateRule": "@request.auth.id != ''",
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "key",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "value",
+                "type": "json",
+                "required": false
+            }
+        ]
+    },
+    {
+        "name": "audit_logs",
+        "type": "base",
+        "system": false,
+        "listRule": "@request.auth.id != ''",
+        "viewRule": "@request.auth.id != ''",
+        "createRule": "@request.auth.id != ''",
+        "updateRule": null,
+        "deleteRule": "@request.auth.id != ''",
+        "fields": [
+            {
+                "name": "userName",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "action",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "entity",
+                "type": "text",
+                "required": true
+            },
+            {
+                "name": "entityId",
+                "type": "text",
+                "required": false
+            },
+            {
+                "name": "details",
+                "type": "json",
+                "required": false
+            },
+            {
+                "name": "ipAddress",
+                "type": "text",
+                "required": false
+            }
+        ]
+    }
+]

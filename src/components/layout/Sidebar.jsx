@@ -6,11 +6,11 @@ export const Sidebar = ({ collapsed, onToggle, mobileOpen, onMobileClose }) => {
     const location = useLocation();
     const { user } = useAuth();
 
-    // Role constants
+    // Role constants - match PocketBase schema
     const ROLES = {
-        SUPER_ADMIN: 'Super Admin',
-        MEDICO: 'Medico',
-        RECEPCION: 'Recepcion'
+        SUPER_ADMIN: 'superadmin',
+        MEDICO: 'medico',
+        RECEPCION: 'recepcion'
     };
 
     // Menu items with role restrictions
@@ -22,10 +22,10 @@ export const Sidebar = ({ collapsed, onToggle, mobileOpen, onMobileClose }) => {
         { label: 'Configuración', path: '/configuracion', icon: Settings, allowedRoles: [ROLES.SUPER_ADMIN, ROLES.MEDICO] },
     ];
 
-    // Filter menu items based on user role
-    const menuItems = allMenuItems.filter(item =>
-        item.allowedRoles.includes(user?.role)
-    );
+    // Filter menu items based on user role (show all if no role or unknown role)
+    const menuItems = user?.role
+        ? allMenuItems.filter(item => item.allowedRoles.includes(user.role))
+        : allMenuItems; // Show all menus if role is undefined (for development)
 
     const isActive = (path) => {
         if (path === '/' && location.pathname === '/') return true;
