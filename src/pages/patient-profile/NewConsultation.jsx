@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Textarea } from '../../components/ui/Textarea';
 import DictadoConsulta from '../../components/consultation/DictadoConsulta';
+import AnalysisUploader from '../../components/consultation/AnalysisUploader';
 import { toast } from 'sonner';
 
 // Lab Studies Catalog
@@ -589,93 +590,105 @@ export default function NewConsultation() {
 
                 {/* Estudios Tab */}
                 {activeTab === 'estudios' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Catalog */}
-                        <div className="lg:col-span-2">
-                            <Card title="Catálogo de Estudios">
-                                <div className="space-y-4">
-                                    {/* Search */}
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            autoComplete="off"
-                                            placeholder="Filtrar..."
-                                            value={studyFilter}
-                                            onChange={(e) => setStudyFilter(e.target.value)}
-                                            className="w-full pl-10 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
-                                        />
-                                    </div>
+                    <div className="space-y-6">
+                        {/* Study Request Section */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Catalog */}
+                            <div className="lg:col-span-2">
+                                <Card title="Catálogo de Estudios">
+                                    <div className="space-y-4">
+                                        {/* Search */}
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                autoComplete="off"
+                                                placeholder="Filtrar..."
+                                                value={studyFilter}
+                                                onChange={(e) => setStudyFilter(e.target.value)}
+                                                className="w-full pl-10 pr-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary"
+                                            />
+                                        </div>
 
-                                    {/* Studies List */}
-                                    <div className="max-h-[400px] overflow-y-auto space-y-1">
-                                        {LAB_STUDIES_CATALOG
-                                            .filter(s => s.name.toLowerCase().includes(studyFilter.toLowerCase()))
-                                            .map((study) => (
-                                                <label
-                                                    key={study.id}
-                                                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedStudies.includes(study.id)
-                                                        ? 'bg-primary/10 border border-primary/30'
-                                                        : 'hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'
-                                                        }`}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedStudies.includes(study.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setSelectedStudies([...selectedStudies, study.id]);
-                                                            } else {
-                                                                setSelectedStudies(selectedStudies.filter(id => id !== study.id));
-                                                            }
-                                                        }}
-                                                        className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
-                                                    />
-                                                    <span className="text-sm text-slate-700 dark:text-slate-300">{study.name}</span>
-                                                </label>
-                                            ))
-                                        }
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
-
-                        {/* Selected + Custom */}
-                        <div className="space-y-4">
-                            <Card title="Estudios Seleccionados">
-                                {selectedStudies.length === 0 ? (
-                                    <p className="text-sm text-slate-400 italic">Selecciona estudios del catálogo</p>
-                                ) : (
-                                    <ul className="space-y-1">
-                                        {selectedStudies.map(id => {
-                                            const study = LAB_STUDIES_CATALOG.find(s => s.id === id);
-                                            return (
-                                                <li key={id} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded">
-                                                    <span className="text-slate-700 dark:text-slate-300">{study?.name}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setSelectedStudies(selectedStudies.filter(s => s !== id))}
-                                                        className="text-red-500 hover:text-red-700 text-xs"
+                                        {/* Studies List */}
+                                        <div className="max-h-[300px] overflow-y-auto space-y-1">
+                                            {LAB_STUDIES_CATALOG
+                                                .filter(s => s.name.toLowerCase().includes(studyFilter.toLowerCase()))
+                                                .map((study) => (
+                                                    <label
+                                                        key={study.id}
+                                                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedStudies.includes(study.id)
+                                                            ? 'bg-primary/10 border border-primary/30'
+                                                            : 'hover:bg-slate-50 dark:hover:bg-slate-900 border border-transparent'
+                                                            }`}
                                                     >
-                                                        ✕
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                )}
-                            </Card>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedStudies.includes(study.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedStudies([...selectedStudies, study.id]);
+                                                                } else {
+                                                                    setSelectedStudies(selectedStudies.filter(id => id !== study.id));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
+                                                        />
+                                                        <span className="text-sm text-slate-700 dark:text-slate-300">{study.name}</span>
+                                                    </label>
+                                                ))
+                                            }
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
 
-                            <Card title="Estudio Personalizado">
-                                <textarea
-                                    autoComplete="off"
-                                    {...register('studies')}
-                                    rows={4}
-                                    placeholder="Escribe estudios adicionales..."
-                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary resize-none text-sm"
-                                />
-                            </Card>
+                            {/* Selected + Custom */}
+                            <div className="space-y-4">
+                                <Card title="Estudios Seleccionados">
+                                    {selectedStudies.length === 0 ? (
+                                        <p className="text-sm text-slate-400 italic">Selecciona estudios del catálogo</p>
+                                    ) : (
+                                        <ul className="space-y-1">
+                                            {selectedStudies.map(id => {
+                                                const study = LAB_STUDIES_CATALOG.find(s => s.id === id);
+                                                return (
+                                                    <li key={id} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded">
+                                                        <span className="text-slate-700 dark:text-slate-300">{study?.name}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedStudies(selectedStudies.filter(s => s !== id))}
+                                                            className="text-red-500 hover:text-red-700 text-xs"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </Card>
+
+                                <Card title="Estudio Personalizado">
+                                    <textarea
+                                        autoComplete="off"
+                                        {...register('studies')}
+                                        rows={4}
+                                        placeholder="Escribe estudios adicionales..."
+                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary resize-none text-sm"
+                                    />
+                                </Card>
+                            </div>
                         </div>
+
+                        {/* Analysis Upload Section */}
+                        <Card title="Registrar Resultado de Análisis">
+                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                                Sube imágenes o PDF de resultados de laboratorio o estudios de imagen.
+                            </p>
+
+                            <AnalysisUploader patientId={activePatient?.id} />
+                        </Card>
                     </div>
                 )}
 
