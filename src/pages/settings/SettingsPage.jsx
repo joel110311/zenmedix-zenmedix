@@ -347,7 +347,7 @@ export default function SettingsPage() {
 
     // Get current user to check role
     const { user: currentUser } = useAuth();
-    const isSuperAdmin = currentUser?.role === 'Super Admin';
+    const isSuperAdmin = currentUser?.role === 'superadmin';
 
     // All sections with role restrictions
     const allSections = [
