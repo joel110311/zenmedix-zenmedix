@@ -48,6 +48,13 @@ export const api = {
 
     // ==================== USERS ====================
     users: {
+        // Role constants
+        getRoles: () => ({
+            SUPER_ADMIN: 'superadmin',
+            MEDICO: 'medico',
+            RECEPCION: 'recepcion'
+        }),
+
         list: async () => {
             const records = await pb.collection('users').getFullList({
                 sort: 'name'

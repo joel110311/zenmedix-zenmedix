@@ -12,11 +12,11 @@ import { toast } from 'sonner';
 const modeIcons = { light: Sun, dark: Moon, system: Monitor };
 const modeLabels = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' };
 
-// Role badge colors
+// Role badge colors - match PocketBase schema (lowercase)
 const ROLE_COLORS = {
-    'Super Admin': 'bg-amber-100 text-amber-700 border-amber-300',
-    'Medico': 'bg-blue-100 text-blue-700 border-blue-300',
-    'Recepcion': 'bg-green-100 text-green-700 border-green-300'
+    'superadmin': 'bg-amber-100 text-amber-700 border-amber-300',
+    'medico': 'bg-blue-100 text-blue-700 border-blue-300',
+    'recepcion': 'bg-green-100 text-green-700 border-green-300'
 };
 
 // Users Management Section Component
@@ -28,7 +28,7 @@ function UsersSection() {
     const [newUserName, setNewUserName] = useState('');
     const [newUserEmail, setNewUserEmail] = useState('');
     const [newUserPassword, setNewUserPassword] = useState('');
-    const [newUserRole, setNewUserRole] = useState('Medico');
+    const [newUserRole, setNewUserRole] = useState('medico');
 
     const ROLES = api.users.getRoles();
 
@@ -78,7 +78,7 @@ function UsersSection() {
             setNewUserName('');
             setNewUserEmail('');
             setNewUserPassword('');
-            setNewUserRole('Medico');
+            setNewUserRole('medico');
             setShowAddForm(false);
             loadUsers();
         } catch (error) {
