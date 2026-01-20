@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
+import AutomationSection from '../../components/settings/AutomationSection';
 
 const modeIcons = { light: Sun, dark: Moon, system: Monitor };
 const modeLabels = { light: 'Claro', dark: 'Oscuro', system: 'Sistema' };
@@ -354,6 +355,7 @@ export default function SettingsPage() {
         { id: 'design', label: 'Diseño', icon: Palette, description: 'Tema y visualización', color: 'from-violet-500 to-purple-500', superAdminOnly: false },
         { id: 'users', label: 'Usuarios y Roles', icon: Users, description: 'Gestionar usuarios', color: 'from-emerald-500 to-teal-500', superAdminOnly: false },
         { id: 'clinic', label: 'Clínica', icon: Building2, description: 'Clinicas y doctores', color: 'from-blue-500 to-indigo-500', superAdminOnly: false },
+        { id: 'automation', label: 'Automatización', icon: Settings, description: 'Bot y horarios n8n', color: 'from-cyan-500 to-blue-500', superAdminOnly: true },
         { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle, description: 'Automatización YCloud', color: 'from-green-500 to-emerald-500', superAdminOnly: true },
         { id: 'webhooks', label: 'Webhooks', icon: Link2, description: 'Conexiones API', color: 'from-orange-500 to-red-500', superAdminOnly: true },
         { id: 'backup', label: 'Respaldo', icon: HardDrive, description: 'NOM-024', color: 'from-green-500 to-emerald-500', superAdminOnly: false },
@@ -667,6 +669,11 @@ export default function SettingsPage() {
                             </div>
                         </Card>
                     </div>
+                )}
+
+                {/* AUTOMATION TAB */}
+                {activeSection === 'automation' && (
+                    <AutomationSection />
                 )}
 
                 {/* WEBHOOKS TAB */}
