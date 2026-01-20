@@ -54,7 +54,7 @@ export default function PatientList() {
     const filteredPatients = patients.filter(p => {
         const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
         const search = searchTerm.toLowerCase();
-        return fullName.includes(search) || p.dni.includes(search);
+        return fullName.includes(search) || (p.phone && p.phone.includes(search));
     });
 
     const handleViewHistory = (patient) => {
@@ -82,7 +82,7 @@ export default function PatientList() {
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
                         <input
                             type="text"
-                            placeholder="Buscar por nombre o DNI..."
+                            placeholder="Buscar por nombre o teléfono..."
                             className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -125,7 +125,7 @@ export default function PatientList() {
                                         <td className="py-3 px-3">
                                             <div>
                                                 <p className="font-medium text-primary hover:underline">{patient.firstName} {patient.lastName}</p>
-                                                <p className="text-xs text-slate-500">DNI: {patient.dni}</p>
+                                                {patient.idNumber && <p className="text-xs text-slate-500">{patient.idType}: {patient.idNumber}</p>}
                                             </div>
                                         </td>
                                         <td className="py-3 px-2 text-sm text-slate-600">{calculateAge(patient.dob)}</td>
@@ -159,7 +159,7 @@ export default function PatientList() {
                                             <p className="font-medium text-primary truncate">
                                                 {patient.firstName} {patient.lastName}
                                             </p>
-                                            <p className="text-xs text-slate-500">DNI: {patient.dni}</p>
+                                            {patient.idNumber && <p className="text-xs text-slate-500">{patient.idType}: {patient.idNumber}</p>}
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className="text-sm font-medium text-slate-700">{calculateAge(patient.dob)} años</p>
