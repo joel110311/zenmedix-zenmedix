@@ -23,7 +23,8 @@ const DEFAULT_SETTINGS = {
         schedule: '',
         delete: '',
         dashboard: '',
-        availability: '' // Webhook to check Google Calendar availability via n8n
+        availability: '', // Webhook to check Google Calendar availability via n8n
+        aiSummary: '' // Webhook for AI voice dictation summary
     },
     whatsapp: {
         ycloudApiKey: '',
@@ -31,6 +32,19 @@ const DEFAULT_SETTINGS = {
         templateName: 'recordatorio_cita_1_dia',
         reminderHour: 'disabled', // 8, 9, 10, or 'disabled'
         timezone: 'America/Mexico_City' // Timezone for cron jobs
+    },
+    // Automation settings for n8n integration
+    automation: {
+        enabled: false,
+        botName: 'Medi',
+        botBehavior: ['profesional'], // profesional, divertido, casual, empático
+        apiToken: '', // Auto-generated token for n8n authentication
+        appointmentDuration: 30 // Default duration in minutes
+    },
+    // Clinic schedules for availability checking
+    clinicSchedules: {
+        // clinicId: { 0: null, 1: { start: '09:00', end: '18:00' }, ... }
+        // null = closed, object with start/end = open
     },
     currency: 'MXN',
     recipeLayout: {
@@ -151,6 +165,32 @@ export const SettingsProvider = ({ children }) => {
         setSettings(prev => ({ ...prev, recipeLayout: { ...prev.recipeLayout, ...recipeLayout } }));
     };
 
+    // Automation functions
+    const updateAutomation = (automation) => {
+        setSettings(prev => ({ ...prev, automation: { ...prev.automation, ...automation } }));
+    };
+
+    const generateApiToken = () => {
+        const token = 'zm_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+        updateAutomation({ apiToken: token });
+        return token;
+    };
+
+    const updateClinicSchedule = (clinicId, schedule) => {
+        setSettings(prev => ({
+            ...prev,
+            clinicSchedules: {
+                ...prev.clinicSchedules,
+                [clinicId]: schedule
+            }
+        }));
+    };
+
+    const getClinicSchedule = (clinicId) => {
+        return settings.clinicSchedules?.[clinicId] || null;
+    };
+
     return (
         <SettingsContext.Provider value={{
             settings,
@@ -172,7 +212,13 @@ export const SettingsProvider = ({ children }) => {
             // WhatsApp
             updateWhatsApp,
             // Recipe Layout
-            updateRecipeLayout
+            updateRecipeLayout,
+            // Automation
+            updateAutomation,
+            generateApiToken,
+            // Clinic Schedules
+            updateClinicSchedule,
+            getClinicSchedule
         }}>
             {children}
         </SettingsContext.Provider>
