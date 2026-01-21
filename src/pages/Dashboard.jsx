@@ -47,67 +47,88 @@ export default function Dashboard() {
             const todayAppointments = [];
 
             allAppointments.forEach(apt => {
-                // Use string comparison for dates to avoid timezone issues
+                // Normalize date - handle both 'T' and space separator
+                const rawDate = apt.date || '';
+                const normalizedDate = rawDate.replace(' ', 'T');
+                const aptDateStr = normalizedDate.split('T')[0];
                 const todayStr = now.toISOString().split('T')[0];
-                const aptDateStr = apt.date?.split('T')[0] || apt.date;
-                const aptDate = new Date(apt.date);
+                const aptDate = new Date(normalizedDate);
                 const aptDay = new Date(aptDate.getFullYear(), aptDate.getMonth(), aptDate.getDate());
 
-                // Count by period
+                // Check if this is a WhatsApp appointment without patient processed
+                const isWhatsAppPending = apt.source === 'whatsapp' && !apt.consultationCompleted && !apt.patient;
+
+                // Add to today's list (show all appointments including WhatsApp)
                 if (aptDateStr === todayStr) {
-                    todayCount++;
                     todayAppointments.push(apt);
+                    // Only count in stats if NOT a pending WhatsApp appointment
+                    if (!isWhatsAppPending) {
+                        todayCount++;
+                    }
                 }
-                if (aptDay >= weekStart) weekCount++;
-                if (aptDay >= monthStart) monthCount++;
+
+                // For week/month stats, exclude pending WhatsApp appointments
+                if (!isWhatsAppPending) {
+                    if (aptDay >= weekStart) weekCount++;
+                    if (aptDay >= monthStart) monthCount++;
+                }
 
                 // Count by status based on logic:
                 // - Agendadas: date/time is in the future
                 // - Asistieron: has consultationCompleted = true
                 // - Canceladas: status === 'cancelled'
                 // - No llegaron: past date AND no consultationCompleted
-                const aptDateTime = new Date(`${apt.date}T${apt.time || '23:59'}`);
+                const aptDateTime = new Date(`${aptDateStr}T${apt.time || '23:59'}`);
                 const isPast = aptDateTime < now;
                 const isCompleted = apt.consultationCompleted === true || apt.status === 'completed' || apt.status === 'attended';
                 const isCancelled = apt.status === 'cancelled';
 
-                if (isCancelled) {
-                    byStatus.cancelled++;
-                } else if (isCompleted) {
-                    byStatus.attended++;
-                } else if (isPast) {
-                    byStatus.noShow++;
-                } else {
-                    byStatus.scheduled++;
+                // Only count in status stats if NOT a pending WhatsApp appointment
+                if (!isWhatsAppPending) {
+                    if (isCancelled) {
+                        byStatus.cancelled++;
+                    } else if (isCompleted) {
+                        byStatus.attended++;
+                    } else if (isPast) {
+                        byStatus.noShow++;
+                    } else {
+                        byStatus.scheduled++;
+                    }
                 }
 
-                // Count by hour (for today)
-                if (aptDay.getTime() === today.getTime()) {
+                // Count by hour (for today) - include all
+                if (aptDateStr === todayStr) {
                     const hour = apt.time?.split(':')[0] || '09';
                     byHour[hour] = (byHour[hour] || 0) + 1;
                 }
 
-                // Count by clinic (handle object case)
-                let clinicName = apt.clinicName || 'Sin clínica';
-                if (apt.clinic && typeof apt.clinic === 'object') {
-                    clinicName = apt.clinic.name || 'Sin clínica';
-                } else if (typeof apt.clinic === 'string') {
-                    clinicName = apt.clinic;
+                // Count by clinic (handle object case) - exclude pending WhatsApp
+                if (!isWhatsAppPending) {
+                    let clinicName = apt.clinicName || 'Sin clínica';
+                    if (apt.clinic && typeof apt.clinic === 'object') {
+                        clinicName = apt.clinic.name || 'Sin clínica';
+                    } else if (typeof apt.clinic === 'string') {
+                        clinicName = apt.clinic;
+                    }
+                    byClinic[clinicName] = (byClinic[clinicName] || 0) + 1;
                 }
-                byClinic[clinicName] = (byClinic[clinicName] || 0) + 1;
 
-                // Count by reason/service
-                const reason = apt.service || apt.reason || 'Consulta General';
-                byReason[reason] = (byReason[reason] || 0) + 1;
-
-                // Count by doctor (handle object case)
-                let doctorName = apt.doctorName || 'Sin asignar';
-                if (apt.doctor && typeof apt.doctor === 'object') {
-                    doctorName = apt.doctor.name || 'Sin asignar';
-                } else if (typeof apt.doctor === 'string') {
-                    doctorName = apt.doctor;
+                // Count by reason/service - exclude pending WhatsApp
+                if (!isWhatsAppPending) {
+                    const reason = apt.service || apt.reason || 'Consulta General';
+                    byReason[reason] = (byReason[reason] || 0) + 1;
                 }
-                byDoctor[doctorName] = (byDoctor[doctorName] || 0) + 1;
+
+                // Count by doctor (handle object case) - exclude pending WhatsApp
+                if (!isWhatsAppPending) {
+                    let doctorName = apt.doctorName || 'Sin asignar';
+                    if (apt.doctor && typeof apt.doctor === 'object') {
+                        doctorName = apt.doctor.name || 'Sin asignar';
+                    } else if (typeof apt.doctor === 'string') {
+                        doctorName = apt.doctor;
+                    }
+                    byDoctor[doctorName] = (byDoctor[doctorName] || 0) + 1;
+                }
             });
 
             // Note: Direct consultations from PocketBase will be handled
