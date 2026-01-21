@@ -221,8 +221,8 @@ export default function AutomationSection() {
                                             type="button"
                                             onClick={() => handleBehaviorToggle(behavior.id)}
                                             className={`p-3 rounded-xl border-2 text-left transition-all ${botBehavior.includes(behavior.id)
-                                                    ? 'border-primary bg-primary/5 shadow-sm'
-                                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                                                ? 'border-primary bg-primary/5 shadow-sm'
+                                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                                                 }`}
                                         >
                                             <span className="text-lg">{behavior.emoji}</span>
@@ -246,8 +246,8 @@ export default function AutomationSection() {
                                             type="button"
                                             onClick={() => setAppointmentDuration(d.value)}
                                             className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${appointmentDuration === d.value
-                                                    ? 'bg-primary text-white shadow-md'
-                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                ? 'bg-primary text-white shadow-md'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                                                 }`}
                                         >
                                             {d.label}
@@ -477,7 +477,34 @@ export default function AutomationSection() {
                                 </div>
                             </div>
 
-                            {/* Endpoint 3: Get Clinics */}
+                            {/* Endpoint 3: Cancel Appointment */}
+                            <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                                <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                    <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded">PATCH</span>
+                                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Cancelar Cita</span>
+                                    <button
+                                        onClick={() => handleCopyEndpoint(`${pbUrl}/api/collections/appointments/records/{id}`, 'cancel')}
+                                        className="ml-auto text-xs text-primary hover:underline flex items-center gap-1"
+                                    >
+                                        {copiedEndpoint === 'cancel' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                                    </button>
+                                </div>
+                                <div className="p-3 bg-slate-50 dark:bg-slate-900">
+                                    <code className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                                        /api/collections/appointments/records/{'{id}'}
+                                    </code>
+                                    <div className="mt-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                        <pre className="text-xs font-mono text-slate-600 dark:text-slate-400 overflow-x-auto">{`{
+  "status": "cancelled"
+}`}</pre>
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        ⚠️ Reemplaza <code className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{'{id}'}</code> con el ID de la cita a cancelar.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Endpoint 4: Get Clinics */}
                             <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                                 <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                     <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded">GET</span>
@@ -499,7 +526,7 @@ export default function AutomationSection() {
                                 </div>
                             </div>
 
-                            {/* Endpoint 4: Search Patient */}
+                            {/* Endpoint 5: Search Patient */}
                             <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
                                 <div className="flex items-center gap-2 px-3 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                     <span className="px-2 py-0.5 bg-green-500 text-white text-xs font-bold rounded">GET</span>
