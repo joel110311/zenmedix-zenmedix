@@ -330,7 +330,7 @@ export default function ConsultationList() {
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 text-slate-500 text-sm mb-1">
                                             <Calendar className="w-4 h-4" />
-                                            {new Date(consult.date).toLocaleDateString('es-ES', {
+                                            {new Date(consult.created || consult.date).toLocaleDateString('es-ES', {
                                                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                                                 hour: '2-digit', minute: '2-digit'
                                             })}
