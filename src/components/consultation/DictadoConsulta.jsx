@@ -128,19 +128,35 @@ export default function DictadoConsulta({ onSummaryReady }) {
         }
 
         setIsGenerating(true);
+        const payload = { transcript, type: 'consultation_summary' };
+
         try {
             console.log('📡 Calling AI summary webhook:', webhookUrl);
+
+            // Try JSON first
             const response = await fetch(webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ transcript, type: 'consultation_summary' })
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error('Error en respuesta: ' + response.status);
+            const text = await response.text();
+            console.log('📥 Response:', response.status, text);
 
-            const data = await response.json();
-            console.log('📥 AI summary response:', data);
-            const generatedSummary = data.summary || data.result || data.text || JSON.stringify(data);
+            let data;
+            try {
+                data = text ? JSON.parse(text) : {};
+            } catch {
+                data = { message: text, success: true };
+            }
+
+            if (!response.ok) throw new Error(data.message || 'Error: ' + response.status);
+
+            const generatedSummary = data.summary || data.result || data.text || data.message || JSON.stringify(data);
             setSummary(generatedSummary);
 
             if (onSummaryReady) {
@@ -149,12 +165,49 @@ export default function DictadoConsulta({ onSummaryReady }) {
 
             toast.success('Resumen generado');
         } catch (error) {
-            console.error('Error generating summary:', error);
+            console.log('❌ JSON request failed:', error.message);
+
+            // Fallback: Try form data (like estetica-dashboard)
             if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-                toast.error('Error de CORS: Configura los headers en n8n');
-            } else {
-                toast.error('Error al generar resumen: ' + error.message);
+                console.log('🔄 Trying form data fallback...');
+                try {
+                    const formData = new URLSearchParams();
+                    Object.entries(payload).forEach(([key, value]) => {
+                        formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+                    });
+
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const text = await response.text();
+                    console.log('📥 Form response:', text);
+
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch {
+                        data = { message: text, success: true };
+                    }
+
+                    const generatedSummary = data.summary || data.result || data.text || data.message || text;
+                    setSummary(generatedSummary);
+
+                    if (onSummaryReady) {
+                        onSummaryReady(generatedSummary);
+                    }
+
+                    toast.success('Resumen generado');
+                    return;
+                } catch (formError) {
+                    console.error('❌ Form fallback also failed:', formError);
+                    toast.error('Error de conexión con n8n');
+                    return;
+                }
             }
+
+            toast.error('Error al generar resumen: ' + error.message);
         } finally {
             setIsGenerating(false);
         }
