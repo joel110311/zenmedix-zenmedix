@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import pb from '../services/pocketbase';
 
 const SettingsContext = createContext();
 
@@ -66,6 +67,9 @@ const DEFAULT_SETTINGS = {
     }
 };
 
+// Config keys that should be synced with PocketBase
+const SYNC_KEYS = ['webhooks', 'whatsapp', 'automation', 'clinicSchedules', 'recipeLayout', 'doctors', 'currency'];
+
 export const SettingsProvider = ({ children }) => {
     const [settings, setSettings] = useState(() => {
         const stored = localStorage.getItem('medflow_settings');
@@ -81,7 +85,63 @@ export const SettingsProvider = ({ children }) => {
         }
         return DEFAULT_SETTINGS;
     });
+    const [isLoading, setIsLoading] = useState(true);
+    const [configLoaded, setConfigLoaded] = useState(false);
 
+    // Helper function to sync a config key to PocketBase
+    const syncToConfig = useCallback(async (key, value) => {
+        if (!pb.authStore.isValid) return; // Only sync if authenticated
+        try {
+            await api.config.set(key, value);
+            console.log(`✅ Config synced to PocketBase: ${key}`);
+        } catch (error) {
+            console.warn(`⚠️ Could not sync config to PocketBase: ${key}`, error);
+        }
+    }, []);
+
+    // Load configuration from PocketBase on mount (if authenticated)
+    useEffect(() => {
+        const loadConfigFromPocketBase = async () => {
+            if (!pb.authStore.isValid) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const configRecords = await api.config.getAll();
+                const pbConfig = {};
+
+                // Convert array of {key, value} to object
+                for (const record of configRecords) {
+                    if (SYNC_KEYS.includes(record.key)) {
+                        pbConfig[record.key] = record.value;
+                    }
+                }
+
+                // Merge PocketBase config with local settings (PB takes priority for synced keys)
+                setSettings(prev => {
+                    const merged = { ...prev };
+                    for (const key of SYNC_KEYS) {
+                        if (pbConfig[key] !== undefined) {
+                            merged[key] = { ...prev[key], ...pbConfig[key] };
+                        }
+                    }
+                    return merged;
+                });
+
+                setConfigLoaded(true);
+                console.log('✅ Config loaded from PocketBase');
+            } catch (error) {
+                console.warn('⚠️ Could not load config from PocketBase, using localStorage:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadConfigFromPocketBase();
+    }, []);
+
+    // Save to localStorage on every change
     useEffect(() => {
         localStorage.setItem('medflow_settings', JSON.stringify(settings));
         // Apply theme
@@ -169,27 +229,30 @@ export const SettingsProvider = ({ children }) => {
         return settings.clinics.find(c => c.id === settings.activeClinic) || settings.clinics[0];
     };
 
-    // Doctor management
-    const addDoctor = (doctor) => {
+    // Doctor management - Synced with PocketBase
+    const addDoctor = async (doctor) => {
         const newDoctor = { ...doctor, id: Date.now().toString() };
-        setSettings(prev => ({ ...prev, doctors: [...prev.doctors, newDoctor] }));
+        const newDoctors = [...settings.doctors, newDoctor];
+        setSettings(prev => ({ ...prev, doctors: newDoctors }));
+        await syncToConfig('doctors', newDoctors);
         return newDoctor;
     };
 
-    const updateDoctor = (id, data) => {
-        setSettings(prev => ({
-            ...prev,
-            doctors: prev.doctors.map(d => d.id === id ? { ...d, ...data } : d)
-        }));
+    const updateDoctor = async (id, data) => {
+        const newDoctors = settings.doctors.map(d => d.id === id ? { ...d, ...data } : d);
+        setSettings(prev => ({ ...prev, doctors: newDoctors }));
+        await syncToConfig('doctors', newDoctors);
     };
 
-    const removeDoctor = (id) => {
+    const removeDoctor = async (id) => {
         if (settings.doctors.length <= 1) return; // Keep at least one
+        const newDoctors = settings.doctors.filter(d => d.id !== id);
         setSettings(prev => ({
             ...prev,
-            doctors: prev.doctors.filter(d => d.id !== id),
-            activeDoctor: prev.activeDoctor === id ? prev.doctors[0]?.id : prev.activeDoctor
+            doctors: newDoctors,
+            activeDoctor: prev.activeDoctor === id ? newDoctors[0]?.id : prev.activeDoctor
         }));
+        await syncToConfig('doctors', newDoctors);
     };
 
     const setActiveDoctor = (id) => {
@@ -200,38 +263,52 @@ export const SettingsProvider = ({ children }) => {
         return settings.doctors.find(d => d.id === settings.activeDoctor) || settings.doctors[0];
     };
 
-    const updateWebhooks = (webhooks) => {
-        setSettings(prev => ({ ...prev, webhooks: { ...prev.webhooks, ...webhooks } }));
+    // Webhooks - Synced with PocketBase
+    const updateWebhooks = async (webhooks) => {
+        const newWebhooks = { ...settings.webhooks, ...webhooks };
+        setSettings(prev => ({ ...prev, webhooks: newWebhooks }));
+        await syncToConfig('webhooks', newWebhooks);
     };
 
-    const updateWhatsApp = (whatsapp) => {
-        setSettings(prev => ({ ...prev, whatsapp: { ...prev.whatsapp, ...whatsapp } }));
+    // WhatsApp - Synced with PocketBase
+    const updateWhatsApp = async (whatsapp) => {
+        const newWhatsapp = { ...settings.whatsapp, ...whatsapp };
+        setSettings(prev => ({ ...prev, whatsapp: newWhatsapp }));
+        await syncToConfig('whatsapp', newWhatsapp);
     };
 
-    const updateRecipeLayout = (recipeLayout) => {
-        setSettings(prev => ({ ...prev, recipeLayout: { ...prev.recipeLayout, ...recipeLayout } }));
+    // Recipe Layout - Synced with PocketBase
+    const updateRecipeLayout = async (recipeLayout) => {
+        const newRecipeLayout = { ...settings.recipeLayout, ...recipeLayout };
+        setSettings(prev => ({ ...prev, recipeLayout: newRecipeLayout }));
+        await syncToConfig('recipeLayout', newRecipeLayout);
     };
 
-    // Automation functions
-    const updateAutomation = (automation) => {
-        setSettings(prev => ({ ...prev, automation: { ...prev.automation, ...automation } }));
+    // Automation - Synced with PocketBase
+    const updateAutomation = async (automation) => {
+        const newAutomation = { ...settings.automation, ...automation };
+        setSettings(prev => ({ ...prev, automation: newAutomation }));
+        await syncToConfig('automation', newAutomation);
     };
 
-    const generateApiToken = () => {
+    const generateApiToken = async () => {
         const token = 'zm_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
             .map(b => b.toString(16).padStart(2, '0')).join('');
-        updateAutomation({ apiToken: token });
+        await updateAutomation({ apiToken: token });
         return token;
     };
 
-    const updateClinicSchedule = (clinicId, schedule) => {
+    // Clinic Schedules - Synced with PocketBase
+    const updateClinicSchedule = async (clinicId, schedule) => {
+        const newSchedules = {
+            ...settings.clinicSchedules,
+            [clinicId]: schedule
+        };
         setSettings(prev => ({
             ...prev,
-            clinicSchedules: {
-                ...prev.clinicSchedules,
-                [clinicId]: schedule
-            }
+            clinicSchedules: newSchedules
         }));
+        await syncToConfig('clinicSchedules', newSchedules);
     };
 
     const getClinicSchedule = (clinicId) => {
@@ -241,6 +318,8 @@ export const SettingsProvider = ({ children }) => {
     return (
         <SettingsContext.Provider value={{
             settings,
+            isLoading,
+            configLoaded,
             updateSettings,
             // Clinic
             addClinic,
