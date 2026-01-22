@@ -87,15 +87,17 @@ export default function DictadoConsulta({ onSummaryReady }) {
 
         setIsGenerating(true);
         try {
+            console.log('📡 Calling AI summary webhook:', webhookUrl);
             const response = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ transcript, type: 'consultation_summary' })
             });
 
-            if (!response.ok) throw new Error('Error en respuesta');
+            if (!response.ok) throw new Error('Error en respuesta: ' + response.status);
 
             const data = await response.json();
+            console.log('📥 AI summary response:', data);
             const generatedSummary = data.summary || data.result || data.text || JSON.stringify(data);
             setSummary(generatedSummary);
 
@@ -106,7 +108,12 @@ export default function DictadoConsulta({ onSummaryReady }) {
             toast.success('Resumen generado');
         } catch (error) {
             console.error('Error generating summary:', error);
-            toast.error('Error al generar resumen');
+            // Check if it's a CORS error
+            if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                toast.error('Error de CORS: Configura los headers en n8n para permitir tu dominio');
+            } else {
+                toast.error('Error al generar resumen: ' + error.message);
+            }
         } finally {
             setIsGenerating(false);
         }
