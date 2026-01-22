@@ -95,15 +95,14 @@ export const SettingsProvider = ({ children }) => {
     // Clinic management - Synced with PocketBase
     const addClinic = async (clinic) => {
         try {
-            // Create in PocketBase first
+            // Create in PocketBase first (logo is handled locally as base64, not sent to PB)
             const pbClinic = await api.clinics.create({
                 name: clinic.name,
                 subtitle: clinic.subtitle || '',
                 phone: clinic.phone || '',
                 address: clinic.address || '',
-                city: clinic.city || '',
-                logo: clinic.logo || '',
-                schedule: clinic.schedule || null
+                city: clinic.city || ''
+                // Note: logo is type 'file' in PocketBase, we keep it local as base64
             });
 
             // Use PocketBase ID for consistency
@@ -126,17 +125,19 @@ export const SettingsProvider = ({ children }) => {
             clinics: prev.clinics.map(c => c.id === id ? { ...c, ...data } : c)
         }));
 
-        // Sync to PocketBase
+        // Sync to PocketBase (only text fields, logo is handled locally)
         try {
-            await api.clinics.update(id, {
-                name: data.name,
-                subtitle: data.subtitle,
-                phone: data.phone,
-                address: data.address,
-                city: data.city,
-                logo: data.logo,
-                schedule: data.schedule
-            });
+            const updateData = {};
+            if (data.name !== undefined) updateData.name = data.name;
+            if (data.subtitle !== undefined) updateData.subtitle = data.subtitle;
+            if (data.phone !== undefined) updateData.phone = data.phone;
+            if (data.address !== undefined) updateData.address = data.address;
+            if (data.city !== undefined) updateData.city = data.city;
+
+            // Only sync if there are fields to update (excluding logo which is local)
+            if (Object.keys(updateData).length > 0) {
+                await api.clinics.update(id, updateData);
+            }
         } catch (error) {
             console.warn('Could not sync clinic update to PocketBase:', error);
         }
