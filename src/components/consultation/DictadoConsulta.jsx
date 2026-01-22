@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
-import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { Mic, MicOff, Trash2, Sparkles, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Mic, Trash2, Sparkles, Loader2, AlertCircle, Copy, Check } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useSettings } from '../../context/SettingsContext';
 import { toast } from 'sonner';
+
+// Get the SpeechRecognition constructor
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 export default function DictadoConsulta({ onSummaryReady }) {
     const { settings } = useSettings();
@@ -11,70 +13,105 @@ export default function DictadoConsulta({ onSummaryReady }) {
     const [summary, setSummary] = useState('');
     const [copied, setCopied] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
+    const [transcript, setTranscript] = useState('');
+    const [isSupported, setIsSupported] = useState(true);
 
-    const {
-        transcript,
-        listening,
-        resetTranscript,
-        browserSupportsSpeechRecognition,
-        isMicrophoneAvailable
-    } = useSpeechRecognition();
+    const recognitionRef = useRef(null);
 
-    // Debug: Log speech recognition status on mount
+    // Check browser support
     useEffect(() => {
-        console.log('🔍 DictadoConsulta mounted:', {
-            browserSupportsSpeechRecognition,
-            isMicrophoneAvailable,
-            hasSpeechRecognition: 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
-        });
-    }, [browserSupportsSpeechRecognition, isMicrophoneAvailable]);
+        if (!SpeechRecognition) {
+            setIsSupported(false);
+            console.log('❌ Speech recognition not supported');
+        } else {
+            console.log('✅ Speech recognition supported');
+        }
+    }, []);
 
-    // Sync local state with library state
-    useEffect(() => {
-        setIsRecording(listening);
-    }, [listening]);
-
-    // Stop listening when component unmounts
+    // Cleanup on unmount
     useEffect(() => {
         return () => {
-            SpeechRecognition.abortListening();
+            if (recognitionRef.current) {
+                recognitionRef.current.abort();
+                recognitionRef.current = null;
+            }
         };
     }, []);
 
-    if (!browserSupportsSpeechRecognition) {
-        return (
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-sm">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <span className="text-amber-700 dark:text-amber-300">
-                    Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.
-                </span>
-            </div>
-        );
-    }
-
-    const startListening = async () => {
-        console.log('🎤 Starting speech recognition...');
-        setIsRecording(true);
-        try {
-            await SpeechRecognition.startListening({ continuous: true, language: 'es-MX' });
-            console.log('✅ Speech recognition started successfully');
-        } catch (error) {
-            console.error('❌ Error starting speech recognition:', error);
-            setIsRecording(false);
-            toast.error('Error al iniciar reconocimiento de voz: ' + error.message);
+    const startListening = useCallback(() => {
+        if (!SpeechRecognition) {
+            toast.error('Tu navegador no soporta reconocimiento de voz');
+            return;
         }
-    };
 
-    const stopListening = () => {
+        console.log('🎤 Starting speech recognition...');
+
+        // Create new recognition instance
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'es-MX';
+
+        let finalTranscript = transcript;
+
+        recognition.onstart = () => {
+            console.log('✅ Speech recognition started');
+            setIsRecording(true);
+        };
+
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const result = event.results[i];
+                if (result.isFinal) {
+                    finalTranscript += result[0].transcript + ' ';
+                } else {
+                    interimTranscript += result[0].transcript;
+                }
+            }
+
+            setTranscript(finalTranscript + interimTranscript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error('❌ Speech recognition error:', event.error);
+            if (event.error !== 'aborted') {
+                toast.error('Error en reconocimiento de voz: ' + event.error);
+            }
+            setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+            console.log('🛑 Speech recognition ended');
+            setIsRecording(false);
+            recognitionRef.current = null;
+        };
+
+        recognitionRef.current = recognition;
+
+        try {
+            recognition.start();
+        } catch (error) {
+            console.error('Error starting recognition:', error);
+            toast.error('Error al iniciar: ' + error.message);
+            setIsRecording(false);
+        }
+    }, [transcript]);
+
+    const stopListening = useCallback(() => {
         console.log('🛑 Stopping speech recognition...');
+
+        if (recognitionRef.current) {
+            recognitionRef.current.abort(); // Use abort() for immediate stop
+            recognitionRef.current = null;
+        }
+
         setIsRecording(false);
-        // Call both to ensure it stops
-        SpeechRecognition.abortListening();
-        SpeechRecognition.stopListening();
-    };
+    }, []);
 
     const handleClear = () => {
-        resetTranscript();
+        setTranscript('');
         setSummary('');
     };
 
@@ -113,9 +150,8 @@ export default function DictadoConsulta({ onSummaryReady }) {
             toast.success('Resumen generado');
         } catch (error) {
             console.error('Error generating summary:', error);
-            // Check if it's a CORS error
             if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-                toast.error('Error de CORS: Configura los headers en n8n para permitir tu dominio');
+                toast.error('Error de CORS: Configura los headers en n8n');
             } else {
                 toast.error('Error al generar resumen: ' + error.message);
             }
@@ -138,6 +174,17 @@ export default function DictadoConsulta({ onSummaryReady }) {
         }
     };
 
+    if (!isSupported) {
+        return (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-sm">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span className="text-amber-700 dark:text-amber-300">
+                    Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.
+                </span>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-3">
             {/* Recording Controls */}
@@ -145,17 +192,17 @@ export default function DictadoConsulta({ onSummaryReady }) {
                 {/* Start Recording Button */}
                 <Button
                     type="button"
-                    variant={isRecording ? "secondary" : "secondary"}
+                    variant="secondary"
                     size="sm"
                     onClick={startListening}
-                    disabled={!isMicrophoneAvailable || isRecording}
+                    disabled={isRecording}
                     className={isRecording ? 'opacity-50' : ''}
                 >
                     <Mic className={`w-4 h-4 mr-1 ${isRecording ? 'text-slate-400' : 'text-green-600'}`} />
                     Iniciar
                 </Button>
 
-                {/* Stop Button - Small red square button */}
+                {/* Stop Button */}
                 <button
                     type="button"
                     onClick={stopListening}
@@ -166,7 +213,6 @@ export default function DictadoConsulta({ onSummaryReady }) {
                         }`}
                     title="Detener grabación"
                 >
-                    {/* Stop icon - square */}
                     <div className={`w-3 h-3 rounded-sm ${isRecording ? 'bg-white' : 'bg-slate-400'}`} />
                 </button>
 
@@ -204,7 +250,7 @@ export default function DictadoConsulta({ onSummaryReady }) {
                 )}
             </div>
 
-            {/* Transcript Display - Shows in real-time */}
+            {/* Transcript Display */}
             <div className={`bg-slate-50 dark:bg-slate-900 border rounded-lg p-3 min-h-[60px] ${isRecording ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'
                 }`}>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
