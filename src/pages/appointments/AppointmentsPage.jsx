@@ -50,11 +50,18 @@ export default function AppointmentsPage() {
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [patientSearchTerm, setPatientSearchTerm] = useState('');
     const [filteredDoctorId, setFilteredDoctorId] = useState('all');
+    const [filteredClinicId, setFilteredClinicId] = useState('all');
 
     const displayedAppointments = useMemo(() => {
-        if (filteredDoctorId === 'all') return appointments;
-        return appointments.filter(a => a.doctorId === filteredDoctorId);
-    }, [appointments, filteredDoctorId]);
+        let filtered = appointments;
+        if (filteredDoctorId !== 'all') {
+            filtered = filtered.filter(a => a.doctorId === filteredDoctorId || (a.doctor && a.doctor.id === filteredDoctorId));
+        }
+        if (filteredClinicId !== 'all') {
+            filtered = filtered.filter(a => a.clinicId === filteredClinicId || (a.clinic && a.clinic.id === filteredClinicId));
+        }
+        return filtered;
+    }, [appointments, filteredDoctorId, filteredClinicId]);
 
     // Form state
     const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -317,6 +324,19 @@ export default function AppointmentsPage() {
                                     <option value="all">(TODOS)</option>
                                     {settings.doctors?.map(d => (
                                         <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="mt-4">
+                                <label className="text-xs text-slate-500 mb-1 block">Clínica *</label>
+                                <select
+                                    value={filteredClinicId}
+                                    onChange={(e) => setFilteredClinicId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary text-sm"
+                                >
+                                    <option value="all">(TODAS)</option>
+                                    {settings.clinics?.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
                                 </select>
                             </div>

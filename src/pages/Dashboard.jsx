@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Calendar, Clock, Building2, User, Activity, CheckCircle, XCircle, AlertCircle, CalendarCheck, MessageCircle, ExternalLink } from 'lucide-react';
-import WeeklyCalendar from '../components/appointments/WeeklyCalendar';
 import { api } from '../services/api';
 
 export default function Dashboard() {
     const [appointments, setAppointments] = useState([]);
     const [allAppointmentsList, setAllAppointmentsList] = useState([]);
-    const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
     const [stats, setStats] = useState({
         today: 0,
         week: 0,
@@ -27,19 +25,8 @@ export default function Dashboard() {
     const loadAppointmentsData = async () => {
         try {
             // Load appointments from PocketBase
-            // Load appointments from PocketBase
             const allAppointments = await api.appointments.list();
-
-            // Prepare for WeeklyCalendar
-            const mappedAppointments = allAppointments.map(apt => ({
-                id: apt.id,
-                time: apt.time,
-                date: (apt.date || '').replace(' ', 'T').split('T')[0],
-                patientName: apt.patientName || (apt.patient && apt.patient.name) || 'Paciente',
-                reason: apt.service || apt.reason || 'Consulta',
-                doctorId: apt.doctor || apt.doctorId
-            }));
-            setAllAppointmentsList(mappedAppointments);
+            setAllAppointmentsList(allAppointments);
 
             // Load consultations
             // For now, we'll get stats from appointments only
@@ -309,21 +296,6 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            {/* Weekly Calendar Section */}
-            <div className="h-[700px] bg-white dark:bg-[#1a1d24] border border-slate-200 dark:border-[#2a2f38] rounded-2xl p-6 shadow-sm">
-                <div className="flex items-center gap-2 mb-4">
-                    <Calendar className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                    <h3 className="font-bold text-slate-800 dark:text-white">Calendario de Citas</h3>
-                </div>
-                <div className="h-[calc(100%-2rem)]">
-                    <WeeklyCalendar
-                        appointments={allAppointmentsList}
-                        currentDate={currentDate}
-                        onDateChange={setCurrentDate}
-                    />
-                </div>
-            </div>
-
             {/* Main Content Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Citas de Hoy */}
@@ -414,6 +386,255 @@ export default function Dashboard() {
 
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Ocupación Semanal - Multi-clinic Line Chart */}
+                <div className="bg-white dark:bg-[#1a1d24] border border-slate-200 dark:border-[#2a2f38] rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                            <h3 className="font-bold text-slate-800 dark:text-white">Ocupación Semanal</h3>
+                        </div>
+                        <span className="text-sm text-slate-500 dark:text-slate-400">
+                            Próximos 7 días
+                        </span>
+                    </div>
+
+                    {(() => {
+                        // Get week days (next 7 days starting today)
+                        const today = new Date();
+                        const weekDays = [];
+                        for (let i = 0; i < 7; i++) {
+                            const d = new Date(today);
+                            d.setDate(d.getDate() + i);
+                            weekDays.push({
+                                date: d.toISOString().split('T')[0],
+                                label: d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })
+                            });
+                        }
+
+                        // Get unique clinics (max 5)
+                        const clinicNames = [...new Set(allAppointmentsList.map(apt => {
+                            let name = 'Sin clínica';
+                            if (apt.clinic && typeof apt.clinic === 'object') {
+                                name = apt.clinic.name || 'Sin clínica';
+                            } else if (typeof apt.clinic === 'string') {
+                                name = apt.clinic;
+                            } else if (apt.clinicName) {
+                                name = apt.clinicName;
+                            }
+                            return name;
+                        }))].slice(0, 5);
+
+                        // Colors for lines
+                        const lineColors = ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6'];
+
+                        // Calculate data per clinic per day
+                        const clinicData = clinicNames.map(clinicName => {
+                            const dataPoints = weekDays.map(day => {
+                                return allAppointmentsList.filter(apt => {
+                                    const aptDate = (apt.date || '').replace(' ', 'T').split('T')[0];
+                                    let aptClinic = 'Sin clínica';
+                                    if (apt.clinic && typeof apt.clinic === 'object') aptClinic = apt.clinic.name || 'Sin clínica';
+                                    else if (typeof apt.clinic === 'string') aptClinic = apt.clinic;
+                                    else if (apt.clinicName) aptClinic = apt.clinicName;
+
+                                    // Exclude pending WhatsApp
+                                    const isWhatsAppPending = apt.source === 'whatsapp' && !apt.consultationCompleted && !apt.patient;
+                                    if (isWhatsAppPending) return false;
+
+                                    return aptDate === day.date && aptClinic === clinicName;
+                                }).length;
+                            });
+                            return { name: clinicName, data: dataPoints };
+                        });
+
+                        // Calculate max value for Y axis
+                        const maxValue = Math.max(...clinicData.flatMap(c => c.data), 1);
+                        const chartHeight = 140;
+                        const chartWidth = 100; // percentage
+
+                        // Generate Y axis labels
+                        const yLabels = [maxValue, Math.round(maxValue / 2), 0];
+
+                        return (
+                            <div>
+                                {/* Legend */}
+                                {clinicNames.length > 1 && (
+                                    <div className="flex flex-wrap gap-3 mb-4">
+                                        {clinicNames.map((clinic, idx) => (
+                                            <div key={clinic} className="flex items-center gap-1.5">
+                                                <span
+                                                    className="w-3 h-3 rounded-full"
+                                                    style={{ backgroundColor: lineColors[idx] }}
+                                                />
+                                                <span className="text-xs text-slate-600 dark:text-slate-400 truncate max-w-[120px]">
+                                                    {clinic}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="relative h-[160px] flex items-end ml-6">
+                                    {/* Y Axis Labels */}
+                                    <div className="absolute left-[-25px] top-0 bottom-0 flex flex-col justify-between text-[10px] text-slate-400 py-1">
+                                        {yLabels.map((lbl, idx) => <span key={idx}>{lbl}</span>)}
+                                    </div>
+
+                                    {/* Grid Lines */}
+                                    <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+                                        <div className="border-t border-slate-100 dark:border-slate-800 w-full" />
+                                        <div className="border-t border-slate-100 dark:border-slate-800 w-full" />
+                                        <div className="border-t border-slate-100 dark:border-slate-800 w-full" />
+                                    </div>
+
+                                    {/* SVG Lines */}
+                                    <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none">
+                                        {clinicData.map((clinic, idx) => {
+                                            // Generate path points
+                                            const points = clinic.data.map((val, i) => {
+                                                const x = (i / (weekDays.length - 1)) * 100; // percentage
+                                                const y = maxValue === 0 ? 100 : 100 - ((val / maxValue) * 100); // percentage from top
+                                                return `${x},${y}`;
+                                            }).join(' ');
+
+                                            // Generate points for circles
+                                            const circles = clinic.data.map((val, i) => {
+                                                const x = (i / (weekDays.length - 1)) * 100;
+                                                const y = maxValue === 0 ? 100 : 100 - ((val / maxValue) * 100);
+                                                return { x, y, val };
+                                            });
+
+                                            const color = lineColors[idx % lineColors.length];
+
+                                            return (
+                                                <g key={clinic.name}>
+                                                    <polyline
+                                                        points={clinic.data.map((val, i) => {
+                                                            const x = (i / (weekDays.length - 1)) * 100 + '%';
+                                                            const y = maxValue === 0 ? 100 : 100 - ((val / maxValue) * 100) + '%';
+                                                            return `${x} ${y}`; // Note: polyline points attrib usually takes "x,y x,y", but percentage handling in SVG polyline is tricky. 
+                                                            // Actually, using viewport coords 0-100 is easier if viewbox is set. But standard div stacking is used here. 
+                                                            // Let's stick to the previous implementation style but with percentages
+                                                        }).join(' ')}
+                                                    // Wait, standard polyline doesn't accept % in points attribute easily in all browsers.
+                                                    // Better to use viewbox. But container has variable width.
+                                                    // Let's use 100x100 viewbox and scale X.
+                                                    />
+                                                    {/* Using a simpler approach for SVG curve: map 0-100 coordinate space */}
+                                                    <path
+                                                        d={`M ${clinic.data.map((val, i) => {
+                                                            const x = (i / (weekDays.length - 1)) * 100;
+                                                            const y = maxValue === 0 ? 140 : 140 - ((val / maxValue) * 140);
+                                                            return `${x} ${y}`;
+                                                        }).join(' L ')}`}
+                                                        fill="none"
+                                                        stroke={color}
+                                                        strokeWidth="2"
+                                                        vectorEffect="non-scaling-stroke"
+                                                    />
+
+                                                    {/* Circles */}
+                                                    {clinic.data.map((val, i) => {
+                                                        const x = (i / (weekDays.length - 1)) * 100;
+                                                        const y = maxValue === 0 ? 140 : 140 - ((val / maxValue) * 140);
+                                                        return (
+                                                            <circle
+                                                                key={i}
+                                                                cx={x}
+                                                                cy={y}
+                                                                r="3"
+                                                                fill={color}
+                                                                className="transition-all hover:r-4"
+                                                                vectorEffect="non-scaling-stroke"
+                                                            >
+                                                                <title>{`${clinic.name}: ${val} citas`}</title>
+                                                            </circle>
+                                                        );
+                                                    })}
+                                                </g>
+                                            );
+                                        })}
+                                    </svg>
+
+                                    {/* X Axis Labels */}
+                                    <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-[10px] text-slate-500">
+                                        {weekDays.map((d, i) => (
+                                            <span key={i} className="text-center w-8">{d.label}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            </div>
+
+            {/* Bottom Row - Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Citas por Clínica (Bar Chart) */}
+                <div className="bg-white dark:bg-[#1a1d24] border border-slate-200 dark:border-[#2a2f38] rounded-xl p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Building2 className="w-5 h-5 text-slate-600 dark:text-slate-400" />
+                        <h3 className="font-bold text-slate-800 dark:text-white">Citas por Clínica/Médico</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* By Clinic */}
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Clínicas ({stats.week} citas)</p>
+                            <div className="space-y-2">
+                                {Object.entries(stats.byClinic).length === 0 ? (
+                                    <p className="text-slate-400 text-xs italic">Sin datos de clínicas</p>
+                                ) : (
+                                    Object.entries(stats.byClinic).slice(0, 3).map(([name, count], idx) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                            <div className="flex-1">
+                                                <div className="flex justify-between text-xs mb-1">
+                                                    <span className="font-medium text-slate-700 dark:text-slate-300">{name}</span>
+                                                    <span className="text-slate-500">{count}</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                                                    <div
+                                                        className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                                                        style={{ width: `${(count / maxClinicValue) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* By Doctor */}
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 mt-4">Médicos</p>
+                            <div className="space-y-2">
+                                {Object.entries(stats.byDoctor).length === 0 ? (
+                                    <p className="text-slate-400 text-xs italic">Sin datos de médicos</p>
+                                ) : (
+                                    Object.entries(stats.byDoctor).slice(0, 3).map(([name, count], idx) => (
+                                        <div key={idx} className="flex items-center gap-2">
+                                            <div className="flex-1">
+                                                <div className="flex justify-between text-xs mb-1">
+                                                    <span className="font-medium text-slate-700 dark:text-slate-300">{name}</span>
+                                                    <span className="text-slate-500">{count}</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
+                                                    <div
+                                                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                                                        style={{ width: `${(count / maxDoctorValue) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
