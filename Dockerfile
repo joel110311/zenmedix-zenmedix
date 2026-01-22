@@ -12,6 +12,8 @@ RUN npm ci
 COPY . .
 
 # Build the app
+ARG VITE_POCKETBASE_URL=https://api-consultorio.logicapp.net
+ENV VITE_POCKETBASE_URL=$VITE_POCKETBASE_URL
 RUN npm run build
 
 # Production stage
