@@ -10,6 +10,7 @@ export default function DictadoConsulta({ onSummaryReady }) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [summary, setSummary] = useState('');
     const [copied, setCopied] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
 
     const {
         transcript,
@@ -28,10 +29,15 @@ export default function DictadoConsulta({ onSummaryReady }) {
         });
     }, [browserSupportsSpeechRecognition, isMicrophoneAvailable]);
 
+    // Sync local state with library state
+    useEffect(() => {
+        setIsRecording(listening);
+    }, [listening]);
+
     // Stop listening when component unmounts
     useEffect(() => {
         return () => {
-            SpeechRecognition.stopListening();
+            SpeechRecognition.abortListening();
         };
     }, []);
 
@@ -47,25 +53,24 @@ export default function DictadoConsulta({ onSummaryReady }) {
     }
 
     const startListening = async () => {
-        console.log('🎤 Starting speech recognition...', {
-            browserSupportsSpeechRecognition,
-            isMicrophoneAvailable,
-            listening
-        });
-
+        console.log('🎤 Starting speech recognition...');
+        setIsRecording(true);
         try {
             await SpeechRecognition.startListening({ continuous: true, language: 'es-MX' });
             console.log('✅ Speech recognition started successfully');
         } catch (error) {
             console.error('❌ Error starting speech recognition:', error);
+            setIsRecording(false);
             toast.error('Error al iniciar reconocimiento de voz: ' + error.message);
         }
     };
 
     const stopListening = () => {
         console.log('🛑 Stopping speech recognition...');
-        // Use abortListening for immediate stop (stopListening waits for final result)
+        setIsRecording(false);
+        // Call both to ensure it stops
         SpeechRecognition.abortListening();
+        SpeechRecognition.stopListening();
     };
 
     const handleClear = () => {
@@ -140,13 +145,13 @@ export default function DictadoConsulta({ onSummaryReady }) {
                 {/* Start Recording Button */}
                 <Button
                     type="button"
-                    variant={listening ? "secondary" : "secondary"}
+                    variant={isRecording ? "secondary" : "secondary"}
                     size="sm"
                     onClick={startListening}
-                    disabled={!isMicrophoneAvailable || listening}
-                    className={listening ? 'opacity-50' : ''}
+                    disabled={!isMicrophoneAvailable || isRecording}
+                    className={isRecording ? 'opacity-50' : ''}
                 >
-                    <Mic className={`w-4 h-4 mr-1 ${listening ? 'text-slate-400' : 'text-green-600'}`} />
+                    <Mic className={`w-4 h-4 mr-1 ${isRecording ? 'text-slate-400' : 'text-green-600'}`} />
                     Iniciar
                 </Button>
 
@@ -154,15 +159,15 @@ export default function DictadoConsulta({ onSummaryReady }) {
                 <button
                     type="button"
                     onClick={stopListening}
-                    disabled={!listening}
-                    className={`p-2 rounded-lg transition-colors ${listening
+                    disabled={!isRecording}
+                    className={`p-2 rounded-lg transition-colors ${isRecording
                         ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse cursor-pointer'
                         : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
                         }`}
                     title="Detener grabación"
                 >
                     {/* Stop icon - square */}
-                    <div className={`w-3 h-3 rounded-sm ${listening ? 'bg-white' : 'bg-slate-400'}`} />
+                    <div className={`w-3 h-3 rounded-sm ${isRecording ? 'bg-white' : 'bg-slate-400'}`} />
                 </button>
 
                 <Button
@@ -191,7 +196,7 @@ export default function DictadoConsulta({ onSummaryReady }) {
                     {isGenerating ? 'Generando...' : 'Generar Resumen IA'}
                 </Button>
 
-                {listening && (
+                {isRecording && (
                     <span className="flex items-center gap-1 text-xs text-red-500">
                         <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
                         Grabando...
@@ -200,10 +205,10 @@ export default function DictadoConsulta({ onSummaryReady }) {
             </div>
 
             {/* Transcript Display - Shows in real-time */}
-            <div className={`bg-slate-50 dark:bg-slate-900 border rounded-lg p-3 min-h-[60px] ${listening ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'
+            <div className={`bg-slate-50 dark:bg-slate-900 border rounded-lg p-3 min-h-[60px] ${isRecording ? 'border-red-300 dark:border-red-700' : 'border-slate-200 dark:border-slate-700'
                 }`}>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
-                    {listening ? (
+                    {isRecording ? (
                         <>
                             <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
                             Transcribiendo en vivo:
@@ -215,10 +220,10 @@ export default function DictadoConsulta({ onSummaryReady }) {
                 <p className="text-sm text-slate-700 dark:text-slate-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
                     {transcript || (
                         <span className="text-slate-400 italic">
-                            {listening ? 'Habla ahora...' : 'Presiona "Iniciar" y comienza a hablar'}
+                            {isRecording ? 'Habla ahora...' : 'Presiona "Iniciar" y comienza a hablar'}
                         </span>
                     )}
-                    {listening && transcript && <span className="inline-block w-0.5 h-4 bg-red-500 animate-pulse ml-0.5 align-middle" />}
+                    {isRecording && transcript && <span className="inline-block w-0.5 h-4 bg-red-500 animate-pulse ml-0.5 align-middle" />}
                 </p>
             </div>
 
