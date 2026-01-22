@@ -37,234 +37,8 @@ const callWebhook = async (hookKey, payload, settings) => {
     }
 };
 
-// Calendar Component
-const AppointmentCalendar = ({ appointments, onDayClick, selectedDate }) => {
-    const [currentMonth, setCurrentMonth] = useState(new Date());
-
-    const daysInMonth = useMemo(() => {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const daysArray = [];
-
-        // Add empty days for padding
-        for (let i = 0; i < firstDay.getDay(); i++) {
-            daysArray.push(null);
-        }
-
-        // Add actual days
-        for (let d = 1; d <= lastDay.getDate(); d++) {
-            daysArray.push(new Date(year, month, d));
-        }
-
-        return daysArray;
-    }, [currentMonth]);
-
-    const getAppointmentsForDay = (date) => {
-        if (!date) return [];
-        const dateStr = date.toISOString().split('T')[0];
-        return appointments.filter(a => a.date === dateStr);
-    };
-
-    const formatMonthYear = (date) => {
-        return date.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-    };
-
-    const isToday = (date) => {
-        if (!date) return false;
-        const today = new Date();
-        return date.toDateString() === today.toDateString();
-    };
-
-    const isSelected = (date) => {
-        if (!date || !selectedDate) return false;
-        return date.toISOString().split('T')[0] === selectedDate;
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-                <button
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                    <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                </button>
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-white capitalize">
-                    {formatMonthYear(currentMonth)}
-                </h3>
-                <button
-                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                    <ChevronRight className="w-5 h-5 text-slate-600 dark:text-slate-400" />
-                </button>
-            </div>
-
-            {/* Days of week */}
-            <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-700">
-                {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map(day => (
-                    <div key={day} className="p-2 text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        {day}
-                    </div>
-                ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7">
-                {daysInMonth.map((date, i) => {
-                    const dayAppointments = getAppointmentsForDay(date);
-                    const hasAppointments = dayAppointments.length > 0;
-
-                    return (
-                        <button
-                            key={i}
-                            type="button"
-                            onClick={() => date && onDayClick(date.toISOString().split('T')[0])}
-                            disabled={!date}
-                            className={`
-                                min-h-[70px] p-1 border-r border-b border-slate-100 dark:border-slate-800 
-                                transition-all duration-150 relative
-                                ${!date ? 'bg-slate-50 dark:bg-slate-950' : 'hover:bg-primary/5 dark:hover:bg-primary/10'}
-                                ${isToday(date) ? 'bg-primary/10 dark:bg-primary/20' : ''}
-                                ${isSelected(date) ? 'ring-2 ring-primary ring-inset' : ''}
-                            `}
-                        >
-                            {date && (
-                                <>
-                                    <span className={`
-                                        text-sm font-medium block
-                                        ${isToday(date) ? 'text-primary font-bold' : 'text-slate-700 dark:text-slate-300'}
-                                    `}>
-                                        {date.getDate()}
-                                    </span>
-                                    {hasAppointments && (
-                                        <div className="mt-1 flex justify-center">
-                                            <span className="text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-medium">
-                                                {dayAppointments.length} {dayAppointments.length === 1 ? 'cita' : 'citas'}
-                                            </span>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-// Day Detail Panel - Table Format with Cod, Name, Phone, Status
-const DayDetail = ({ date, appointments }) => {
-    if (!date) return null;
-
-    const dayAppointments = appointments
-        .filter(a => a.date === date)
-        .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-    const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('es-MX', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short'
-    });
-
-    const getStatusBadge = (status) => {
-        switch (status) {
-            case 'completed':
-            case 'attended':
-                return <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">Confirmada</span>;
-            case 'cancelled':
-                return <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded">Cancelada</span>;
-            case 'noShow':
-                return <span className="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5 rounded">No llegó</span>;
-            default:
-                return <span className="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded">No confirmada</span>;
-        }
-    };
-
-    return (
-        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Pacientes con cita del día</span>
-                    <CalendarPlus className="w-4 h-4 text-amber-500" />
-                    <span className="text-sm font-semibold text-slate-700 dark:text-white capitalize">{formattedDate}</span>
-                </div>
-            </div>
-
-            {dayAppointments.length === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-3">No hay citas</p>
-            ) : (
-                <div className="overflow-x-auto">
-                    {/* Table Header */}
-                    <div className="grid grid-cols-[40px_50px_1fr_90px_100px_80px] gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 pb-2 border-b border-slate-200 dark:border-slate-700">
-                        <span>Pac</span>
-                        <span>Hora</span>
-                        <span>Nombre</span>
-                        <span>Teléfono</span>
-                        <span>Estado</span>
-                        <span>Acciones</span>
-                    </div>
-
-                    {/* Table Body */}
-                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {dayAppointments.map((appt, idx) => (
-                            <div key={appt.id} className="grid grid-cols-[40px_50px_1fr_90px_100px_80px] gap-2 py-2 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{idx + 1}</span>
-                                <span className="text-sm font-medium text-blue-600 dark:text-blue-400">{appt.time || '--:--'}</span>
-                                <span className="text-sm font-medium text-slate-800 dark:text-white truncate">{appt.patientName || 'Sin nombre'}</span>
-                                <span className="text-sm text-slate-600 dark:text-slate-400">{appt.phone || 'N/A'}</span>
-                                {getStatusBadge(appt.status)}
-                                <div className="flex items-center gap-1">
-                                    {appt.patientId && (
-                                        <a
-                                            href={`/pacientes/${appt.patientId}/historial`}
-                                            className="p-1 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded text-xs flex items-center gap-1"
-                                            title="Ver expediente"
-                                        >
-                                            <ExternalLink className="w-3 h-3" />
-                                            <span className="hidden sm:inline">Exp.</span>
-                                        </a>
-                                    )}
-                                    <button
-                                        type="button"
-                                        disabled={!(() => {
-                                            const today = new Date().toISOString().split('T')[0];
-                                            const reminderDate = appt.reminderSentAt ? appt.reminderSentAt.split('T')[0] : null;
-                                            return appt.reminderSent && reminderDate === today;
-                                        })()}
-                                        className={`p-1 rounded transition-colors ${(() => {
-                                            const today = new Date().toISOString().split('T')[0];
-                                            const reminderDate = appt.reminderSentAt ? appt.reminderSentAt.split('T')[0] : null;
-                                            return appt.reminderSent && reminderDate === today;
-                                        })()
-                                            ? 'bg-green-100 hover:bg-green-200 text-green-600 cursor-pointer'
-                                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                            }`}
-                                        title={(() => {
-                                            const today = new Date().toISOString().split('T')[0];
-                                            const reminderDate = appt.reminderSentAt ? appt.reminderSentAt.split('T')[0] : null;
-                                            return appt.reminderSent && reminderDate === today
-                                                ? 'Enviar mensaje WhatsApp'
-                                                : 'WhatsApp no disponible (ventana 24h cerrada)';
-                                        })()}
-                                    >
-                                        <MessageCircle className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                </div>
-            )}
-        </div>
-    );
-};
+import WeeklyCalendar from '../../components/appointments/WeeklyCalendar';
+import MiniCalendar from '../../components/appointments/MiniCalendar';
 
 export default function AppointmentsPage() {
     const { settings } = useSettings();
@@ -275,6 +49,12 @@ export default function AppointmentsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [patientSearchTerm, setPatientSearchTerm] = useState('');
+    const [filteredDoctorId, setFilteredDoctorId] = useState('all');
+
+    const displayedAppointments = useMemo(() => {
+        if (filteredDoctorId === 'all') return appointments;
+        return appointments.filter(a => a.doctorId === filteredDoctorId);
+    }, [appointments, filteredDoctorId]);
 
     // Form state
     const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -477,7 +257,6 @@ export default function AppointmentsPage() {
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Gestión de Citas</h1>
-            <p className="text-slate-500 dark:text-slate-400">Administra las citas de tus pacientes</p>
 
             {/* Tab Buttons */}
             <div className="flex gap-2 border-b border-slate-200 dark:border-slate-700">
@@ -515,16 +294,38 @@ export default function AppointmentsPage() {
 
             {/* Calendar Tab */}
             {activeTab === 'calendar' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                        <AppointmentCalendar
-                            appointments={appointments}
-                            onDayClick={setSelectedDate}
-                            selectedDate={selectedDate}
+                <div className="flex flex-col xl:flex-row gap-6">
+                    <div className="flex-1 min-h-[600px]">
+                        <WeeklyCalendar
+                            appointments={displayedAppointments}
+                            currentDate={selectedDate}
+                            onDateChange={setSelectedDate}
                         />
                     </div>
-                    <div>
-                        <DayDetail date={selectedDate} appointments={appointments} />
+                    <div className="w-full xl:w-80 space-y-6">
+                        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                Mostrar citas
+                            </label>
+                            <div>
+                                <label className="text-xs text-slate-500 mb-1 block">Médico *</label>
+                                <select
+                                    value={filteredDoctorId}
+                                    onChange={(e) => setFilteredDoctorId(e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:ring-2 focus:ring-primary text-sm"
+                                >
+                                    <option value="all">(TODOS)</option>
+                                    {settings.doctors?.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <MiniCalendar
+                            selectedDate={selectedDate}
+                            onDateChange={setSelectedDate}
+                        />
                     </div>
                 </div>
             )}
