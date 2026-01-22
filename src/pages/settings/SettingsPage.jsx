@@ -288,9 +288,9 @@ export default function SettingsPage() {
         }
     };
 
-    const handleAddClinic = () => {
+    const handleAddClinic = async () => {
         if (newClinicName) {
-            addClinic({
+            await addClinic({
                 name: newClinicName,
                 subtitle: newClinicSubtitle,
                 phone: newClinicPhone,

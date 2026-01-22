@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../services/api';
 
 const SettingsContext = createContext();
 
@@ -91,27 +92,72 @@ export const SettingsProvider = ({ children }) => {
         setSettings(prev => ({ ...prev, ...updates }));
     };
 
-    // Clinic management
-    const addClinic = (clinic) => {
-        const newClinic = { ...clinic, id: Date.now().toString() };
-        setSettings(prev => ({ ...prev, clinics: [...prev.clinics, newClinic] }));
-        return newClinic;
+    // Clinic management - Synced with PocketBase
+    const addClinic = async (clinic) => {
+        try {
+            // Create in PocketBase first
+            const pbClinic = await api.clinics.create({
+                name: clinic.name,
+                subtitle: clinic.subtitle || '',
+                phone: clinic.phone || '',
+                address: clinic.address || '',
+                city: clinic.city || '',
+                logo: clinic.logo || '',
+                schedule: clinic.schedule || null
+            });
+
+            // Use PocketBase ID for consistency
+            const newClinic = { ...clinic, id: pbClinic.id, pbId: pbClinic.id };
+            setSettings(prev => ({ ...prev, clinics: [...prev.clinics, newClinic] }));
+            return newClinic;
+        } catch (error) {
+            console.error('Error creating clinic in PocketBase:', error);
+            // Fallback to local-only if PocketBase fails
+            const newClinic = { ...clinic, id: Date.now().toString() };
+            setSettings(prev => ({ ...prev, clinics: [...prev.clinics, newClinic] }));
+            return newClinic;
+        }
     };
 
-    const updateClinic = (id, data) => {
+    const updateClinic = async (id, data) => {
+        // Update local state immediately
         setSettings(prev => ({
             ...prev,
             clinics: prev.clinics.map(c => c.id === id ? { ...c, ...data } : c)
         }));
+
+        // Sync to PocketBase
+        try {
+            await api.clinics.update(id, {
+                name: data.name,
+                subtitle: data.subtitle,
+                phone: data.phone,
+                address: data.address,
+                city: data.city,
+                logo: data.logo,
+                schedule: data.schedule
+            });
+        } catch (error) {
+            console.warn('Could not sync clinic update to PocketBase:', error);
+        }
     };
 
-    const removeClinic = (id) => {
+    const removeClinic = async (id) => {
         if (settings.clinics.length <= 1) return; // Keep at least one
+
+        // Update local state immediately
         setSettings(prev => ({
             ...prev,
             clinics: prev.clinics.filter(c => c.id !== id),
             activeClinic: prev.activeClinic === id ? prev.clinics[0]?.id : prev.activeClinic
         }));
+
+        // Sync to PocketBase
+        try {
+            await api.clinics.delete(id);
+        } catch (error) {
+            console.warn('Could not sync clinic deletion to PocketBase:', error);
+        }
     };
 
     const setActiveClinic = (id) => {
