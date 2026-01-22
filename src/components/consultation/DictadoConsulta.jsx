@@ -64,7 +64,8 @@ export default function DictadoConsulta({ onSummaryReady }) {
 
     const stopListening = () => {
         console.log('🛑 Stopping speech recognition...');
-        SpeechRecognition.stopListening();
+        // Use abortListening for immediate stop (stopListening waits for final result)
+        SpeechRecognition.abortListening();
     };
 
     const handleClear = () => {
