@@ -156,11 +156,20 @@ export default function DictadoConsulta({ onSummaryReady }) {
 
             if (!response.ok) throw new Error(data.message || 'Error: ' + response.status);
 
-            const generatedSummary = data.summary || data.result || data.text || data.message || JSON.stringify(data);
-            setSummary(generatedSummary);
-
-            if (onSummaryReady) {
-                onSummaryReady(generatedSummary);
+            // Check if response has structured medical data
+            if (data.motivo_principal || data.nota_evolucion || data.signos_vitales) {
+                // Pass the structured object directly
+                setSummary(JSON.stringify(data, null, 2));
+                if (onSummaryReady) {
+                    onSummaryReady(data); // Pass object, not string
+                }
+            } else {
+                // Fallback to text extraction
+                const generatedSummary = data.summary || data.result || data.text || data.message || JSON.stringify(data);
+                setSummary(generatedSummary);
+                if (onSummaryReady) {
+                    onSummaryReady(generatedSummary);
+                }
             }
 
             toast.success('Resumen generado');
@@ -191,11 +200,18 @@ export default function DictadoConsulta({ onSummaryReady }) {
                         data = { message: text, success: true };
                     }
 
-                    const generatedSummary = data.summary || data.result || data.text || data.message || text;
-                    setSummary(generatedSummary);
-
-                    if (onSummaryReady) {
-                        onSummaryReady(generatedSummary);
+                    // Check if response has structured medical data
+                    if (data.motivo_principal || data.nota_evolucion || data.signos_vitales) {
+                        setSummary(JSON.stringify(data, null, 2));
+                        if (onSummaryReady) {
+                            onSummaryReady(data); // Pass object, not string
+                        }
+                    } else {
+                        const generatedSummary = data.summary || data.result || data.text || data.message || text;
+                        setSummary(generatedSummary);
+                        if (onSummaryReady) {
+                            onSummaryReady(generatedSummary);
+                        }
                     }
 
                     toast.success('Resumen generado');

@@ -389,9 +389,64 @@ export default function NewConsultation() {
                                 <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Dictado por Voz (opcional)</label>
                                     <DictadoConsulta
-                                        onSummaryReady={(summary) => {
-                                            const current = watch('notes') || '';
-                                            setValue('notes', current ? current + '\n\n' + summary : summary);
+                                        onSummaryReady={(summaryData) => {
+                                            // summaryData can be string or object
+                                            let data = summaryData;
+
+                                            // Try to parse if it's a string that looks like JSON
+                                            if (typeof summaryData === 'string') {
+                                                try {
+                                                    data = JSON.parse(summaryData);
+                                                } catch {
+                                                    // If not parseable, use as plain text for notes
+                                                    const current = watch('notes') || '';
+                                                    setValue('notes', current ? current + '\n\n' + summaryData : summaryData);
+                                                    return;
+                                                }
+                                            }
+
+                                            // If it's an object, distribute to fields
+                                            if (typeof data === 'object' && data !== null) {
+                                                // Motivo Principal
+                                                if (data.motivo_principal) {
+                                                    setValue('chiefComplaint', data.motivo_principal);
+                                                }
+
+                                                // Nota de Evolución
+                                                if (data.nota_evolucion) {
+                                                    const current = watch('notes') || '';
+                                                    setValue('notes', current ? current + '\n\n' + data.nota_evolucion : data.nota_evolucion);
+                                                }
+
+                                                // Signos Vitales (si vienen en la respuesta)
+                                                if (data.signos_vitales) {
+                                                    const sv = data.signos_vitales;
+                                                    if (sv.presion) {
+                                                        const [sys, dia] = sv.presion.split('/').map(s => s.replace(/\D/g, ''));
+                                                        if (sys) setValue('vitalSigns.systolic', sys);
+                                                        if (dia) setValue('vitalSigns.diastolic', dia);
+                                                    }
+                                                    if (sv.temperatura) setValue('vitalSigns.temperature', sv.temperatura.replace(/[^\d.]/g, ''));
+                                                    if (sv.frecuencia_cardiaca) setValue('vitalSigns.heartRate', sv.frecuencia_cardiaca.replace(/\D/g, ''));
+                                                    if (sv.spo2) setValue('vitalSigns.spO2', sv.spo2.replace(/\D/g, ''));
+                                                    if (sv.peso) setValue('vitalSigns.weight', sv.peso.replace(/[^\d.]/g, ''));
+                                                    if (sv.talla) setValue('vitalSigns.height', sv.talla.replace(/\D/g, ''));
+                                                }
+
+                                                // Diagnóstico (si viene)
+                                                if (data.diagnostico) {
+                                                    setValue('diagnosis', data.diagnostico);
+                                                }
+
+                                                // Tratamiento/Indicaciones (si viene)
+                                                if (data.tratamiento || data.indicaciones) {
+                                                    setValue('treatmentPlan', data.tratamiento || data.indicaciones);
+                                                }
+                                            } else {
+                                                // Fallback: just append to notes
+                                                const current = watch('notes') || '';
+                                                setValue('notes', current ? current + '\n\n' + String(data) : String(data));
+                                            }
                                         }}
                                     />
                                 </div>
