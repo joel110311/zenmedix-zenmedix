@@ -108,29 +108,27 @@ export const SettingsProvider = ({ children }) => {
             }
 
             try {
-                const configRecords = await api.config.getAll();
-                const pbConfig = {};
-
-                // Convert array of {key, value} to object
-                for (const record of configRecords) {
-                    if (SYNC_KEYS.includes(record.key)) {
-                        pbConfig[record.key] = record.value;
-                    }
-                }
+                // api.config.getAll() returns an object: { key: value, ... }
+                const pbConfig = await api.config.getAll();
 
                 // Merge PocketBase config with local settings (PB takes priority for synced keys)
                 setSettings(prev => {
                     const merged = { ...prev };
                     for (const key of SYNC_KEYS) {
                         if (pbConfig[key] !== undefined) {
-                            merged[key] = { ...prev[key], ...pbConfig[key] };
+                            // For objects, merge; for primitives, replace
+                            if (typeof pbConfig[key] === 'object' && !Array.isArray(pbConfig[key])) {
+                                merged[key] = { ...prev[key], ...pbConfig[key] };
+                            } else {
+                                merged[key] = pbConfig[key];
+                            }
                         }
                     }
                     return merged;
                 });
 
                 setConfigLoaded(true);
-                console.log('✅ Config loaded from PocketBase');
+                console.log('✅ Config loaded from PocketBase', pbConfig);
             } catch (error) {
                 console.warn('⚠️ Could not load config from PocketBase, using localStorage:', error);
             } finally {
