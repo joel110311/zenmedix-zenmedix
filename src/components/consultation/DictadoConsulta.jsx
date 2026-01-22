@@ -19,6 +19,15 @@ export default function DictadoConsulta({ onSummaryReady }) {
         isMicrophoneAvailable
     } = useSpeechRecognition();
 
+    // Debug: Log speech recognition status on mount
+    useEffect(() => {
+        console.log('🔍 DictadoConsulta mounted:', {
+            browserSupportsSpeechRecognition,
+            isMicrophoneAvailable,
+            hasSpeechRecognition: 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window
+        });
+    }, [browserSupportsSpeechRecognition, isMicrophoneAvailable]);
+
     // Stop listening when component unmounts
     useEffect(() => {
         return () => {
@@ -37,11 +46,24 @@ export default function DictadoConsulta({ onSummaryReady }) {
         );
     }
 
-    const startListening = () => {
-        SpeechRecognition.startListening({ continuous: true, language: 'es-MX' });
+    const startListening = async () => {
+        console.log('🎤 Starting speech recognition...', {
+            browserSupportsSpeechRecognition,
+            isMicrophoneAvailable,
+            listening
+        });
+
+        try {
+            await SpeechRecognition.startListening({ continuous: true, language: 'es-MX' });
+            console.log('✅ Speech recognition started successfully');
+        } catch (error) {
+            console.error('❌ Error starting speech recognition:', error);
+            toast.error('Error al iniciar reconocimiento de voz: ' + error.message);
+        }
     };
 
     const stopListening = () => {
+        console.log('🛑 Stopping speech recognition...');
         SpeechRecognition.stopListening();
     };
 
@@ -126,8 +148,8 @@ export default function DictadoConsulta({ onSummaryReady }) {
                     onClick={stopListening}
                     disabled={!listening}
                     className={`p-2 rounded-lg transition-colors ${listening
-                            ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse cursor-pointer'
-                            : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                        ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse cursor-pointer'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
                         }`}
                     title="Detener grabación"
                 >
